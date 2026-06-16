@@ -11,6 +11,7 @@ from .models import *
 from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet
 from shared.mixins import StaffRequiredMixin
 from shared.decorators import audit_action
+from shared.mixins import ExportFieldsMixin
 
 # === REGISTRO ===
 class SignUpView(CreateView):
@@ -108,8 +109,50 @@ class SupplierDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     staff_redirect_url = '/suppliers/'
 
 # === PRODUCT (CBV) ===
-class ProductListView(LoginRequiredMixin, ListView):
-    model = Product; template_name = 'billing/product_list.html'; context_object_name = 'items'
+class ProductListView(LoginRequiredMixin, ExportFieldsMixin, ListView):
+    model = Product
+    template_name = 'billing/product_list.html'
+    context_object_name = 'items'
+    paginate_by = 10
+
+    # Configuración del Mixin de Exportación
+    export_filename = 'listado_productos'
+    export_fields = ['name', 'brand__name', 'group__name', 'unit_price', 'stock', 'is_active']
+    export_headers = ['Nombre del Producto', 'Marca', 'Grupo', 'Precio Unitario', 'Existencias', 'Estado']
+
+    def get_queryset(self):
+        # ... Mantén exactamente todo tu código de filtrado de request.GET que hicimos en el paso anterior ...
+        queryset = Product.objects.select_related('brand', 'group').all().order_by('name')
+
+        name_query = self.request.GET.get('search_name')
+        if name_query: queryset = queryset.filter(name__icontains=name_query)
+
+        brand_query = self.request.GET.get('search_brand')
+        if brand_query and brand_query.isdigit(): queryset = queryset.filter(brand_id=brand_query)
+
+        group_query = self.request.GET.get('search_group')
+        if group_query and group_query.isdigit(): queryset = queryset.filter(group_id=group_query)
+
+        price_min = self.request.GET.get('search_price_min')
+        price_max = self.request.GET.get('search_price_max')
+        if price_min: queryset = queryset.filter(unit_price__gte=price_min)
+        if price_max: queryset = queryset.filter(unit_price__lte=price_max)
+
+        stock_min = self.request.GET.get('search_stock_min')
+        if stock_min and stock_min.isdigit(): queryset = queryset.filter(stock__gte=stock_min)
+
+        active_query = self.request.GET.get('search_active')
+        if active_query in ['true', 'false']: queryset = queryset.filter(is_active=(active_query == 'true'))
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['brands'] = Brand.objects.all()
+        context['groups'] = ProductGroup.objects.all()
+        context['filters'] = self.request.GET
+        return context
+    
 class ProductCreateView(LoginRequiredMixin, CreateView):
     model = Product; fields = ['name','description','brand','group','suppliers','unit_price','stock','is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
