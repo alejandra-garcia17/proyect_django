@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.urls import reverse_lazy
 from django.contrib.auth import login
 from .models import *
@@ -12,6 +12,8 @@ from .forms import SignUpForm, BrandForm, InvoiceForm, InvoiceDetailFormSet
 from shared.mixins import StaffRequiredMixin
 from shared.decorators import audit_action
 from shared.mixins import ExportFieldsMixin
+from .forms import ProductForm
+from .models import Product
 
 # === REGISTRO ===
 class SignUpView(CreateView):
@@ -114,16 +116,45 @@ class ProductListView(LoginRequiredMixin, ExportFieldsMixin, ListView):
     template_name = 'billing/product_list.html'
     context_object_name = 'items'
     paginate_by = 10
-
-    # Configuración del Mixin de Exportación
     export_filename = 'listado_productos'
-    export_fields = ['name', 'brand__name', 'group__name', 'unit_price', 'stock', 'is_active']
-    export_headers = ['Nombre del Producto', 'Marca', 'Grupo', 'Precio Unitario', 'Existencias', 'Estado']
+    
+    # Mapeo maestro e inmutable para mapear campos HTML vs Atributos del Modelo Django/Propiedades
+    MASTER_COLUMNS = {
+        'imagen': ('image', 'Imagen'),
+        'name': ('name', 'Nombre del Producto'),
+        'brand': ('brand__name', 'Marca'),
+        'group': ('group__name', 'Grupo'),
+        'price': ('unit_price', 'Precio Unitario'),
+        'stock': ('stock', 'Existencias'),
+        'balance': ('balance', 'Balance Total'),
+        'status': ('is_active', 'Estado'),
+    }
+
+    def dispatch(self, request, *args, **kwargs):
+        # Capturamos los campos visibles pasados dinámicamente por la URL/GET
+        visible_cols_html = request.GET.getlist('visible_columns')
+        
+        if visible_cols_html:
+            dynamic_fields = []
+            dynamic_headers = []
+            # Garantizamos mantener estrictamente el orden lógico definido en MASTER_COLUMNS
+            for key, (field, header) in self.MASTER_COLUMNS.items():
+                if key in visible_cols_html:
+                    dynamic_fields.append(field)
+                    dynamic_headers.append(header)
+            
+            if dynamic_fields:
+                self.export_fields = dynamic_fields
+                self.export_headers = dynamic_headers
+        else:
+            # Configuración por defecto si no viaja ningún parámetro
+            self.export_fields = [v[0] for v in self.MASTER_COLUMNS.values()]
+            self.export_headers = [v[1] for v in self.MASTER_COLUMNS.values()]
+            
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        # ... Mantén exactamente todo tu código de filtrado de request.GET que hicimos en el paso anterior ...
         queryset = Product.objects.select_related('brand', 'group').all().order_by('name')
-
         name_query = self.request.GET.get('search_name')
         if name_query: queryset = queryset.filter(name__icontains=name_query)
 
@@ -143,7 +174,6 @@ class ProductListView(LoginRequiredMixin, ExportFieldsMixin, ListView):
 
         active_query = self.request.GET.get('search_active')
         if active_query in ['true', 'false']: queryset = queryset.filter(is_active=(active_query == 'true'))
-
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -152,11 +182,36 @@ class ProductListView(LoginRequiredMixin, ExportFieldsMixin, ListView):
         context['groups'] = ProductGroup.objects.all()
         context['filters'] = self.request.GET
         return context
-    
+
 class ProductCreateView(LoginRequiredMixin, CreateView):
-    model = Product; fields = ['name','description','brand','group','suppliers','unit_price','stock','is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product
+    form_class = ProductForm  # 1. Enlazado al Formulario personalizado centralizado
+    template_name = 'billing/product_form.html'
+    success_url = reverse_lazy('billing:product_list')
+
+    def form_valid(self, form):
+        form.instance = form.save(commit=False)
+        if self.request.FILES.get('image'):
+            form.instance.image = self.request.FILES['image']
+        return super().form_valid(form)
+
 class ProductUpdateView(LoginRequiredMixin, UpdateView):
-    model = Product; fields = ['name','description','brand','group','suppliers','unit_price','stock','is_active']; template_name = 'billing/product_form.html'; success_url = reverse_lazy('billing:product_list')
+    model = Product
+    form_class = ProductForm  # 1. Enlazado al Formulario personalizado centralizado
+    template_name = 'billing/product_form.html'
+    success_url = reverse_lazy('billing:product_list')
+
+    def form_valid(self, form):
+        form.instance = form.save(commit=False)
+        if self.request.FILES.get('image'):
+            form.instance.image = self.request.FILES['image']
+        return super().form_valid(form)
+
+# NUEVA VISTA: Detalle del Producto
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    model = Product
+    template_name = 'billing/product_detail.html'
+    context_object_name = 'product'
 
 # NUEVO REEMPLAZO: ProductDeleteView
 class ProductDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
@@ -179,7 +234,6 @@ class CustomerDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     template_name = 'billing/customer_confirm_delete.html'
     success_url = reverse_lazy('billing:customer_list')
     staff_redirect_url = '/customers/'
-
 
 # =============================================
 # CRUD DE INVOICE - VISTAS BASADAS EN FUNCIONES

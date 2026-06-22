@@ -1,0 +1,79 @@
+{% extends 'billing/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm border-0 rounded-3 bg-white">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                    <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>Product Detail</h4>
+                    <span class="badge {% if product.is_active %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                        {% if product.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4 align-items-center">
+                        <div class="col-md-5 text-center">
+                            <div class="p-3 border bg-light rounded-3 shadow-sm mx-auto d-flex align-items-center justify-content-center" style="max-width: 320px; height: 320px; overflow: hidden;">
+                                {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="img-fluid rounded-3" style="max-height: 100%; max-width: 100%; object-fit: cover;">
+                                {% else %}
+                                    <div class="text-muted d-flex flex-column align-items-center">
+                                        <i class="bi bi-image" style="font-size: 4rem;"></i>
+                                        <span class="fw-bold mt-2">Sin imagen cargada</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <h2 class="text-primary border-bottom pb-2 mb-3 fw-bold">{{ product.name }}</h2>
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Marca</span>
+                                    <strong class="fs-5 text-dark">{{ product.brand.name }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Grupo / Categoría</span>
+                                    <strong class="fs-5 text-dark">{{ product.group.name }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Precio Unitario</span>
+                                    <strong class="fs-4 text-success">${{ product.unit_price }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Existencias (Stock)</span>
+                                    <strong class="fs-4 text-dark">{{ product.stock }}</strong>
+                                </div>
+                                <div class="col-12">
+                                    <div class="bg-light p-3 rounded-3 border-start border-primary border-4 shadow-sm">
+                                        <span class="text-muted small d-block fw-bold">BALANCE TOTAL DE INVENTARIO</span>
+                                        <strong class="fs-3 text-primary">${{ product.balance }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <span class="text-muted small d-block">Proveedores Asociados</span>
+                                    <div class="mt-1">
+                                        {% for supplier in product.suppliers.all %}
+                                            <span class="badge bg-secondary me-1 p-2"><i class="bi bi-truck me-1"></i>{{ supplier.name }}</span>
+                                        {% empty %}
+                                            <span class="text-muted italic small">No tiene proveedores asignados.</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <span class="text-muted small d-block">Descripción</span>
+                                    <p class="text-secondary mt-1 bg-light p-2 rounded border" style="white-space: pre-line;">{{ product.description|default:"Sin descripción proporcionada." }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light d-flex justify-content-between p-3">
+                    <a href="{% url 'billing:product_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Regresar al listado</a>
+                    <a href="{% url 'billing:product_update' product.pk %}" class="btn btn-warning px-4"><i class="bi bi-pencil-square me-1"></i>Editar campos</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

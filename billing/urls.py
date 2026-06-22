@@ -1,7 +1,11 @@
-from django.urls import path
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings               # <--- IMPORTANTE: Importar settings
+from django.conf.urls.static import static     # <--- IMPORTANTE: Importar static
 from . import views
 app_name = 'billing'
 urlpatterns = [
+    path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('signup/', views.SignUpView.as_view(), name='signup'),
     # Brand (FBV)
@@ -22,6 +26,7 @@ urlpatterns = [
     # Product
     path('products/', views.ProductListView.as_view(), name='product_list'),
     path('products/create/', views.ProductCreateView.as_view(), name='product_create'),
+    path('products/<int:pk>/', views.ProductDetailView.as_view(), name='product_detail'),  # NUEVA
     path('products/<int:pk>/edit/', views.ProductUpdateView.as_view(), name='product_update'),
     path('products/<int:pk>/delete/', views.ProductDeleteView.as_view(), name='product_delete'),
     # Customer
@@ -35,3 +40,6 @@ urlpatterns = [
     path('invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
     path('invoices/<int:pk>/delete/', views.invoice_delete, name='invoice_delete'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,9 +1,9 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Brand
+from .models import Product, Brand, ProductGroup, Supplier
 from django.forms import inlineformset_factory
-from .models import Invoice, InvoiceDetail
+from .models import Invoice, InvoiceDetail, Product
 
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={'class':'form-control'}))
@@ -50,3 +50,57 @@ InvoiceDetailFormSet = inlineformset_factory(
         'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
     }
 )
+
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = [
+            'name', 'description', 'brand', 'group', 
+            'suppliers', 'unit_price', 'stock', 'image', 'is_active'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control rounded-3',
+                'placeholder': 'Ej. Laptop Dell Inspiron 15',
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control rounded-3',
+                'placeholder': 'Escriba una descripción detallada...',
+                'rows': 3,
+            }),
+            'brand': forms.Select(attrs={'class': 'form-select rounded-3'}),
+            'group': forms.Select(attrs={'class': 'form-select rounded-3'}),
+            'suppliers': forms.SelectMultiple(attrs={
+                'class': 'form-select rounded-3', 
+                'size': '4'
+            }),
+            'unit_price': forms.NumberInput(attrs={
+                'class': 'form-control rounded-3',
+                'placeholder': '0.00',
+                'step': '0.01',
+                'min': '0.01',  # Validación UX en Frontend
+            }),
+            'stock': forms.NumberInput(attrs={
+                'class': 'form-control rounded-3',
+                'placeholder': '0',
+                'min': '0',
+            }),
+            'image': forms.FileInput(attrs={
+                'class': 'form-control rounded-3',
+                'accept': 'image/*',
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        help_texts = {
+            'name': 'Ingrese un nombre descriptivo y comercial del producto.',
+            'unit_price': 'El precio unitario debe ser estrictamente mayor que cero.',
+            'stock': 'Cantidad disponible en bodega.',
+            'image': 'Formatos permitidos: JPG, PNG, WEBP.',
+        }
+
+    def clean_unit_price(self):
+        """3. Validación obligatoria del lado servidor para unit_price > 0"""
+        unit_price = self.cleaned_data.get('unit_price')
+        if unit_price is None or unit_price <= 0:
+            raise forms.ValidationError('El precio unitario debe ser mayor que cero.')
+        return unit_price

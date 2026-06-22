@@ -1,26 +1,243 @@
 {% extends 'billing/base.html' %}
-{% block title %}Product{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card shadow">
-      <div class="card-header bg-primary text-white"><h4>Product</h4></div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
-          {% for field in form %}
-          <div class="mb-3">
-            <label class="form-label fw-bold">{{ field.label }}</label>
-            {{ field }}
-            <small class="text-muted">{{ field.help_text }}</small>
-            {% for error in field.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
-          </div>
-          {% endfor %}
-          <button type="submit" class="btn btn-primary">Save</button>
-          <a href="{% url 'billing:product_list' %}" class="btn btn-secondary">Cancel</a>
-        </form>
-      </div>
+<div class="container mt-4 mb-5">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-1">
+                        <li class="breadcrumb-item"><a href="{% url 'billing:product_list' %}">Productos</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{% if object %}Editar Producto{% else %}Nuevo Producto{% endif %}</li>
+                    </ol>
+                </nav>
+                <h2 class="fw-bold text-dark">
+                    {% if object %}<i class="bi bi-pencil-square text-warning"></i> Editar: {{ object.name }}{% else %}<i class="bi bi-plus-circle-fill text-success"></i> Crear Nuevo Producto{% endif %}
+                </h2>
+            </div>
+            <a href="{% url 'billing:product_list' %}" class="btn btn-outline-secondary shadow-sm">
+                <i class="bi bi-arrow-left"></i> Regresar al Listado
+            </a>
+        </div>
     </div>
-  </div>
+
+    {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> <strong>Por favor, corrija los siguientes errores:</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_block %}
+        <div class="row g-4">
+            
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-3">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-card-text me-2"></i> Detalles de Identificación y Costos</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="{{ form.name.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-tag-fill me-1 text-primary"></i> {{ form.name.label }}
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.help_text %}<div class="form-text text-muted small">{{ form.name.help_text }}</div>{% endif %}
+                                {% if form.name.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.name.errors|striptags }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.brand.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-building me-1 text-primary"></i> {{ form.brand.label }}
+                                </label>
+                                {{ form.brand }}
+                                {% if form.brand.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.brand.errors|striptags }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.group.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-collection-fill me-1 text-primary"></i> {{ form.group.label }}
+                                </label>
+                                {{ form.group }}
+                                {% if form.group.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.group.errors|striptags }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label for="{{ form.suppliers.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-truck me-1 text-primary"></i> {{ form.suppliers.label }}
+                                </label>
+                                {{ form.suppliers }}
+                                <div class="form-text text-muted small">Mantenga presionado Ctrl (o Cmd en Mac) para seleccionar múltiples proveedores.</div>
+                                {% if form.suppliers.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.suppliers.errors|striptags }}</div>{% endif %}
+                            </div>
+
+                            <hr class="my-3 text-muted">
+
+                            <div class="col-md-6">
+                                <label for="{{ form.unit_price.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-currency-dollar me-1 text-success"></i> {{ form.unit_price.label }}
+                                </label>
+                                {{ form.unit_price }}
+                                {% if form.unit_price.help_text %}<div class="form-text text-muted small">{{ form.unit_price.help_text }}</div>{% endif %}
+                                {% if form.unit_price.errors %}<div class="text-danger small mt-1" id="servidor_price_error"><i class="bi bi-x-circle-fill"></i> {{ form.unit_price.errors|striptags }}</div>{% endif %}
+                                <div class="text-danger small mt-1 d-none" id="frontend_price_error"><i class="bi bi-x-circle-fill"></i> El precio unitario debe ser mayor que cero.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.stock.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-boxes me-1 text-info"></i> {{ form.stock.label }}
+                                </label>
+                                {{ form.stock }}
+                                {% if form.stock.help_text %}<div class="form-text text-muted small">{{ form.stock.help_text }}</div>{% endif %}
+                                {% if form.stock.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.stock.errors|striptags }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label for="{{ form.description.id_for_label }}" class="form-label fw-bold text-secondary mb-1">
+                                    <i class="bi bi-justify-left me-1 text-secondary"></i> {{ form.description.label }}
+                                </label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="card-title mb-0"><i class="bi bi-image me-2"></i> Imagen del Producto</h5>
+                    </div>
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3 d-flex justify-content-center">
+                            <div id="imagePreviewContainer" 
+                                class="border rounded-3 p-1 bg-light shadow-sm d-flex align-items-center justify-content-center" 
+                                style="width: 100%; max-width: 220px; height: 220px; overflow: hidden;"
+                                data-has-image="{% if object.image %}true{% else %}false{% endif %}"> {% if object and object.image %}
+                                    <img src="{{ object.image.url }}" id="imgPreview" class="rounded-3" style="width: 100%; height: 100%; object-fit: cover;">
+                                {% else %}
+                                    <div id="noImgPlaceholder" class="d-flex flex-column align-items-center text-muted">
+                                        <i class="bi bi-image-alt" style="font-size: 3.5rem;"></i>
+                                        <span class="fw-bold small">Sin Imagen Seleccionada</span>
+                                    </div>
+                                    <img src="" id="imgPreview" class="rounded-3 d-none" style="width: 100%; height: 100%; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="text-start mb-3">
+                            <label for="{{ form.image.id_for_label }}" class="form-label fw-bold text-secondary small mb-1">Subir o reemplazar imagen</label>
+                            {{ form.image }}
+                            {% if form.image.help_text %}<div class="form-text text-muted small">{{ form.image.help_text }}</div>{% endif %}
+                            {% if form.image.errors %}<div class="text-danger small mt-1"><i class="bi bi-x-circle-fill"></i> {{ form.image.errors|striptags }}</div>{% endif %}
+                        </div>
+
+                        <div class="form-check form-switch text-start border p-2 rounded-3 bg-light ps-5">
+                            {{ form.is_active }}
+                            <label class="form-check-label fw-bold text-dark cursor-pointer" for="{{ form.is_active.id_for_label }}">Producto Activo en Catálogo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-3 bg-gradient bg-light text-dark">
+                    <div class="card-body p-4 text-center">
+                        <h6 class="text-uppercase tracking-wider fw-bold text-secondary small mb-2">
+                            <i class="bi bi-calculator-fill me-1"></i> Balance de Inventario Estimado
+                        </h6>
+                        <div class="display-6 fw-bold text-primary mb-1" id="balanceDisplay">$0.00</div>
+                        <p class="text-muted small mb-0">Calculado dinámicamente: <br><strong>Precio Unitario × Stock Actual</strong></p>
+                    </div>
+                </div>
+
+                <div class="mt-4 gap-2 d-grid">
+                    <button type="submit" class="btn btn-success btn-lg shadow rounded-3 py-2 fw-bold" id="btnSubmitForm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Producto
+                    </button>
+                    <a href="{% url 'billing:product_list' %}" class="btn btn-light btn-md rounded-3 border">
+                        Cancelar y salir
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const inputPrice = document.getElementById("{{ form.unit_price.id_for_label }}");
+    const inputStock = document.getElementById("{{ form.stock.id_for_label }}");
+    const inputImage = document.getElementById("{{ form.image.id_for_label }}");
+    
+    const containerPreview = document.getElementById("imagePreviewContainer");
+    const imgPreview = document.getElementById("imgPreview");
+    const placeholderImg = document.getElementById("noImgPlaceholder");
+    
+    const frontendError = document.getElementById("frontend_price_error");
+    const serverError = document.getElementById("servidor_price_error");
+    const btnSubmit = document.getElementById("btnSubmitForm");
+
+    // Lógica para calcular el balance dinámico
+    function calculateBalance() {
+        const price = parseFloat(inputPrice.value) || 0;
+        const stock = parseInt(inputStock.value) || 0;
+        
+        // Validación UX inmediata en el Frontend
+        if (inputPrice.value !== "" && price <= 0) {
+            inputPrice.classList.add("is-invalid");
+            if (frontendError) frontendError.classList.remove("d-none");
+            if (serverError) serverError.classList.add("d-none");
+            if (btnSubmit) btnSubmit.disabled = true;
+        } else {
+            inputPrice.classList.remove("is-invalid");
+            if (frontendError) frontendError.classList.add("d-none");
+            if (btnSubmit) btnSubmit.disabled = false;
+        }
+
+        const balanceTotal = price * stock;
+        const balanceDisplay = document.getElementById("balanceDisplay");
+        if (balanceDisplay) {
+            balanceDisplay.textContent = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(balanceTotal);
+        }
+    }
+
+    // Escuchar eventos de cambio en inputs numéricos
+    if (inputPrice) inputPrice.addEventListener("input", calculateBalance);
+    if (inputStock) inputStock.addEventListener("input", calculateBalance);
+
+    // Vista previa inmediata de la imagen seleccionada sin cruzar Django con JS
+    if (inputImage) {
+        inputImage.addEventListener("change", function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imgPreview.src = e.target.result;
+                    imgPreview.classList.remove("d-none");
+                    if (placeholderImg) placeholderImg.classList.add("d-none");
+                }
+                reader.readAsDataURL(file);
+            } else {
+                // Recuperamos de forma segura si el producto ya tiene imagen usando el atributo data
+                const hasOriginalImage = containerPreview.getAttribute("data-has-image") === "true";
+                if (!hasOriginalImage) {
+                    imgPreview.src = "";
+                    imgPreview.classList.add("d-none");
+                    if (placeholderImg) placeholderImg.classList.remove("d-none");
+                }
+            }
+        });
+    }
+
+    // Ejecutar cálculo inicial al cargar la página
+    calculateBalance();
+});
+</script>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .tracking-wider { letter-spacing: 0.05em; }
+</style>
 {% endblock %}
