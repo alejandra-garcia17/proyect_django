@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # TecnoStock S.A. — Sales & Purchasing System
 
 ## Cómo la app `purchasing` reutiliza `Supplier` y `Product` de `billing`
@@ -42,3 +43,17 @@ python manage.py runserver
 ```
 
 Accede a `/purchases/` para gestionar el módulo de compras.
+=======
+### Instrucciones de Configuración
+
+1. **Crear el entorno virtual:**
+```bash
+python -m venv env
+env\Scripts\activate
+
+pip install -r requirements.txt
+
+python manage.py makemigrations
+python manage.py migrate
+python manage.py runserver
+
