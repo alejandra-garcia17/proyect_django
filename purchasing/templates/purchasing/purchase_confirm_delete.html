@@ -1,0 +1,24 @@
+{% extends 'billing/base.html' %}
+{% block title %}Delete Purchase{% endblock %}
+{% block content %}
+
+<div class="card shadow border-danger">
+  <div class="card-header bg-danger text-white">
+    <h4>⚠️ Confirm Deletion</h4>
+  </div>
+  <div class="card-body">
+    <p class="fs-5">
+      Are you sure you want to delete <strong>{{ object }}</strong>?
+    </p>
+    <p class="text-muted">
+      This will also delete all <strong>{{ object.details.count }}</strong> detail line(s) associated with this purchase.
+      This action cannot be undone.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Yes, delete</button>
+      <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

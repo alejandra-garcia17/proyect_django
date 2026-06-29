@@ -1,0 +1,73 @@
+{% extends 'billing/base.html' %}
+{% block title %}Purchase List{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>📦 Purchases</h3>
+  <a href="{% url 'purchasing:purchase_create' %}" class="btn btn-success">+ New Purchase</a>
+</div>
+
+<!-- Reto 3: Filtros por proveedor y año -->
+<form method="get" class="row g-2 mb-4">
+  <div class="col-md-4">
+    <select name="supplier" class="form-select">
+      <option value="">All Suppliers</option>
+      {% for s in suppliers %}
+        <option value="{{ s.pk }}" {% if filters.supplier == s.pk|stringformat:"s" %}selected{% endif %}>
+          {{ s.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <input type="number" name="year" class="form-control" placeholder="Year (e.g. 2025)"
+           value="{{ filters.year }}" min="2000" max="2100">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+  </div>
+  <div class="col-md-2">
+    <a href="{% url 'purchasing:purchase_list' %}" class="btn btn-outline-secondary w-100">Clear</a>
+  </div>
+</form>
+
+<div class="card shadow">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th>#</th>
+          <th>Supplier</th>
+          <th>Invoice No.</th>
+          <th>Date</th>
+          <th class="text-end">Subtotal</th>
+          <th class="text-end">IVA 15%</th>
+          <th class="text-end">Total</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for purchase in items %}
+        <tr>
+          <td>{{ purchase.id }}</td>
+          <td>{{ purchase.supplier.name }}</td>
+          <td>{{ purchase.document_number }}</td>
+          <td>{{ purchase.purchase_date|date:"d/m/Y" }}</td>
+          <td class="text-end">${{ purchase.subtotal }}</td>
+          <td class="text-end">${{ purchase.tax }}</td>
+          <td class="text-end fw-bold">${{ purchase.total }}</td>
+          <td class="text-center">
+            <a href="{% url 'purchasing:purchase_detail' purchase.pk %}" class="btn btn-sm btn-info">View</a>
+            <a href="{% url 'purchasing:purchase_delete' purchase.pk %}" class="btn btn-sm btn-danger">Delete</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">No purchases found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
